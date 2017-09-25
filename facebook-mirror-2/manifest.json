@@ -1,0 +1,17 @@
+{
+  "manifest_version": 2,
+  "name": "Facebook Me Me",
+  "description": "Re-interprets people's facebook posts.",
+  "homepage_url": "https://github.com/Britnell/BrowserExtensions",
+  "version": "1.0",
+  "icons": {
+    "48": "icons/icon.png"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.facebook.com/*"],
+      "js": ["./substitute.js"]
+    }
+  ]
+}

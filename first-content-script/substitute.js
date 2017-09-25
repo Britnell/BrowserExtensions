@@ -3,8 +3,6 @@
  * all occurrences of each mapped word with its emoji counterpart.
  */
 
-let regex = /[a-zA-Z]+/g
-
 /**
  * Substitutes emojis into text nodes.
  * If the node contains more than just text (ex: it has child nodes),
@@ -13,6 +11,8 @@ let regex = /[a-zA-Z]+/g
  * @param  {Node} node    - The target DOM Node.
  * @return {void}         - Note: the emoji substitution is done inline.
  */
+
+
 
  function child( node, Lis){
    //initial_node = node;
@@ -47,78 +47,145 @@ let regex = /[a-zA-Z]+/g
    }
  }
 
- var hyperf_ex = /hyperfeed_story_id_/;
- var testid_ex = /fbfeed_story/;
 
- function is_hyper( node){
-   // little fix, not all nodes have .hasAttribute, so test for nodeType 1
-   if( node.nodeType === 1 && node.hasAttribute('data-testid') )  {
-     if( testid_ex.test(node.dataset.testid) )  {
-       if( hyperf_ex.test(node.id) )  {
-         return true;
-       }
-     }
-   }
-
-   return false;
-   // Eo find_hyper
+ function is_empty(node){
+   return child(is_empty,[0]);
  }
 
- function replaceWithMe (node) {
+ //   #   ]#    #   Reg Ex
+//    #
+//    #
 
-   if( node.textContent ) {
-     let content = node.textContent;
+var post_RE = /_5pbx userContent/;
+function is_post(node){
 
-     content = content.replace(regex, "me");
-
-     node.textContent = content;
-   }
-   // Eo replace
- }
-
- function hyper_repl_content(hyper){
-
-   entire = child(hyper, [0,0,1,0] );
-
-   if( entire ){
-     userContent = child(entire, [1,1,0] );
-     if( userContent) {
-       //  userContent.className; // == "userContent", _5pbx_userContent
-       replaceWithMe(userContent);
-     }
-   }
-
-   // Eo hyper_repl_content
- }
-
-function replaceText (node) {
-  // Setting textContent on a node removes all of its children and replaces
-  // them with a single text node. Since we don't want to alter the DOM aside
-  // from substituting text, we only substitute on single text nodes.
-  // @see https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent
-  if (node.nodeType === Node.TEXT_NODE) {
-    // This node only contains text.
-    // @see https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType.
-
-    // do NOTHING to text nodes. we do that when looking at the DIV nodes
+  if( post_RE.test(node.className) )  {
+    return true;
   }
-  else {
-    if( is_hyper(node) ){
-      // node = a hyper
-      hyper_repl_content(node);
-      // Eo if
-    }
 
-    // This node contains more than just text, call replaceText() on each
-    // of its children.
-    for (let i = 0; i < node.childNodes.length; i++) {
-      replaceText(node.childNodes[i]);
-    }
-  }
+  return false;
 }
 
-// Start the recursion from the body tag.
-replaceText(document.body);
+//var comment_RE = /_3b-9/;
+var comment_RE = /UFICommentBody/;
+
+function is_comment(node){
+
+  if( comment_RE.test(node.className) )  {
+    return true;
+  }
+
+  return false;
+}
+
+// #
+var desription_RE = /((_5pco)|(_5pcm)|(_6m7)|(mbs _5pbx))/;
+
+function is_description(node){
+  if( desription_RE.test(node.className) )  {
+    return true;
+  }
+
+  return false;
+}
+
+
+//    #   #   #   #   #       Replace Me
+//    #
+//    #
+
+
+function string_me( notme){
+  var newme = 'M';
+
+  if(notme.length >2){
+    for( x=1; x<notme.length; x++){
+      newme += 'e';
+    }
+  }
+  else{
+    if(notme.length>1){
+      newme = 'me';
+    }
+    else{
+      newme = 'm-';
+    }
+  }
+  return newme;
+}
+// #
+
+function text_me( notme){
+    spliz = notme.split(" ");
+
+    for(w=0; w<spliz.length; w++){
+      spliz[w] = string_me(spliz[w]);
+    }
+    return spliz.join(" ");
+}
+
+function content_me( nodeme){
+      newmsg = text_me(nodeme.textContent);
+      nodeme.textContent = newmsg;
+}
+
+function node_me( node){
+  if( node.nodeType === Node.TEXT_NODE)
+  {
+      content_me(node);
+        // do something here to end - text nodes
+  } // Eo if nodetype
+  else {
+
+    for (let i = 0; i < node.childNodes.length; i++) {
+      node_me(node.childNodes[i]);
+    } // Eo for
+     // Eo if
+  }
+
+
+} // Eo function
+
+ //   #   #   #   #   #
+
+ function loopNodes(node) {
+     // each node
+     // if its a hyperfeed_xyz then replace.
+     if( node.nodeType === Node.TEXT_NODE)
+     {
+
+           // do something here to end - text nodes
+     } // Eo if nodetype
+     else {
+
+       //console.log( node.nodeType, node);
+       if( is_post(node) ){
+         //console.log("post:",node);
+         node_me(node);
+       }
+       if( is_comment(node) ){
+         //console.log("commt:",node);
+         node_me(node);
+       }
+       if(is_description(node) ){
+         console.log(node);
+         node_me(node);
+       }
+
+       for (let i = 0; i < node.childNodes.length; i++) {
+         loopNodes(node.childNodes[i]);
+       } // Eo for
+        // Eo if
+     }
+
+     // Eo loopHyperfeed
+ }
+
+
+ // Start the recursion from the body tag.
+ loopNodes(document.body);
+
+
 
 // Now monitor the DOM for additions and substitute emoji into new nodes.
 // @see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver.
@@ -129,11 +196,12 @@ const observer = new MutationObserver((mutations) => {
       // algorithm on each newly added node.
       for (let i = 0; i < mutation.addedNodes.length; i++) {
         const newNode = mutation.addedNodes[i];
-        replaceText(newNode);
+        loopNodes(newNode);
       }
     }
   });
 });
+
 observer.observe(document.body, {
   childList: true,
   subtree: true

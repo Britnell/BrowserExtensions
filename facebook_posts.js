@@ -1,5 +1,35 @@
 // finding facebook post content with javascript
-// notes from running in console
+// notes from running in console as separate functions.
+
+/*
+    All code only as functions that aren't called,
+
+    however loopNodes() is called, which is a loop that iterates
+    over all <html> nodes, and their children recursively.
+    loopNodes(document.body);
+
+    until it gets to TEXT_NODE's at the end.
+
+    this loop is used to go through all HTML nodes.
+    in my code then I use it to identify
+
+    Posts on the fb feed
+    which have node.id "hyperfeed_story_id"
+
+    I print these with hyper_print(node)
+
+    Hyper_print applies all the routes I figure out of finding sub elements
+    of the post-node via it's childNodes.
+
+    This is only of limited use since every type of post and "news story" on your
+    feed has a different structure, but identifying nodes like this helped me
+    figure out the common names more easily
+
+    In a later stage i used console.log() to print the node element,
+    so that the HTML node can be read in console and identified on the page.
+    This helped me figure out the structure and naming of all the different nodes.
+
+*/
 
 
 function child( node, Lis){
@@ -25,7 +55,15 @@ function child( node, Lis){
   }
 }
 
+function is_empty(node){
+  return child(is_empty,[0]);
+}
+
+
 var hyperfeed_RE = /hyperfeed_story_id_/;
+var profilepost_RE = /4-u2 mbm _4mrt _5jmm _5pat _5v3q _4-u8/;
+var profilepost_RE_s = /4-u2 mbm _4mrt/;
+
 var testid_RE = /fbfeed_story/;
 var substream_RE = /substream/;
 var comments_RE = /UFIList/;
@@ -50,6 +88,7 @@ function is_post_related( node){
   // Eo find_hyper
 }
 
+
 function is_hyperfeed( node){
 
   // little fix, not all nodes have .hasAttribute, so test for nodeType 1
@@ -61,6 +100,16 @@ function is_hyperfeed( node){
   // Eo find_hyper
 }
 
+function is_profile_post( node) {
+  if( profilepost_RE.test(node.id) )  {
+    return true;
+  }
+  if( profilepost_RE_s.test(node.id) )  {
+    return true;
+  }
+
+  return false;
+}
 
 function is_comment( node){
 
@@ -109,24 +158,25 @@ function get_suggested_page(hyperf){
     return suggested;
 }
 
+function get_suggested_post(hyperf){
+    // child(hyperf,[0,0,0,0]);   // "Suggested Page"
+    entire = get_entire(hyperf);
 
-function hyper_repl_content(hyper){
-  //    hyper.textContent;    // all text
-  //    hyper.dataset.testid;   // "fbfeed_story"
-  entire = get_entire(hyper);
 
-  // entire[0]
-  //header = child(entire, [1,0]);
+    suggested = child(hyperf,[0,0,0]);
 
-  /// entire[1]
-  userContent = child(entire, [1,1] );
-  //  userContent.className; // == "userContent", _5pbx_userContent
-  userContent = child(userContent, [0] );
-  if(userContent){
-    replaceContent(userContent);
-  }
-  // Eo hyper_repl_content
+    sugg_header = child(hyperf,[0,0,0,1,0]);    // Heading/title
+    sugg_content = child(hyperf,[0,0,0,1,1,0]);    // suggested text1
+    sugg_attach = child(hyperf,[0,0,0,1,1,1]);
+
+    return suggested;
 }
+
+function user_likes_page(entire) {
+  return child(entire,[1,3,0,0,1]);
+  // then 0 - 1 have post - comments respectively
+}
+
 
 function hyper_print(hyper){
     console.log("hyper:", hyper);
@@ -146,11 +196,31 @@ function hyper_print(hyper){
     postAttachment = child(postObject,[1,0,1,0]);
     console.log("attachment:",postAttachment);
 
-    user_did_post = get_user_did(hyper);
-    console.log("user did X:",user_did_post);
+    user_liked_page = user_likes_page(entire);
+    console.log("liked page:", child(user_likes_page,[0]) );
+    console.log("comments for liked page:", child(user_likes_page,[1]) );
+
+    user_did = get_user_did(hyper);
+    console.log("user did X entire:",user_did);
+
+    user_did_post = child(user_did,[0,0,1]);   //post
+    console.log("user did X post:",user_did_post);
+    // contains [0] header    // [1] post-text    // [2] post-object
+
+    user_did_post_comment = child(user_did,[1,0]);   //comments
+    console.log("user did X comments:",user_did_post_comment);
 
     suggested = get_suggested_page(hyper);
-    console.log("suggested:", suggested);
+    console.log("suggested page:", suggested);
+
+    suggested_text = child(suggested,[1,1,0]);
+    console.log("suggested text:",suggested_text);
+    suggested_object = child(suggested,[1,1,1]);
+
+    suggested_post = child(entire, [2,2]);
+    console.log("suggested post:", suggested_post);
+    suggested_post_object = child(entire, [2,3]);
+    console.log("suggested post object:", suggested_post_object);
 
     Attachment_header = child(postAttachment,[0,0]);
     Attachment_content = child(postAttachment, [0,1]);
@@ -177,7 +247,7 @@ function loopNodes(node) {
       // do something here to div / Type 1
       //if( is_post_related(node) ){console.log(node)}
 
-      if( is_hyperfeed(node) ){
+      if( is_hyperfeed(node) || is_profile_post(node) ){
         hyper_print(node);
 
       }
@@ -192,6 +262,25 @@ function loopNodes(node) {
 loopNodes(document.body);
 
 ///var hyperf_ex2 = /UFICommentBody/;
+
+
+function hyper_repl_content(hyper){
+  //    hyper.textContent;    // all text
+  //    hyper.dataset.testid;   // "fbfeed_story"
+  entire = get_entire(hyper);
+
+  // entire[0]
+  //header = child(entire, [1,0]);
+
+  /// entire[1]
+  userContent = child(entire, [1,1] );
+  //  userContent.className; // == "userContent", _5pbx_userContent
+  userContent = child(userContent, [0] );
+  if(userContent){
+    replaceContent(userContent);
+  }
+  // Eo hyper_repl_content
+}
 
 
 function loopComments(node) {
@@ -279,10 +368,10 @@ function hyper_structure(hyper){
 }
 
 
-regex = /[a-zA-Z]+/g;
+
 
 function replaceContent (node) {
-
+  regex = /[a-zA-Z]+/g;
   if( node.textContent ) {
     let content = node.textContent;
 
@@ -354,4 +443,30 @@ function ex_replaceText(node) {
 
 }
 
+function content_me( nodeme){
+      newmsg = string_me(nodeme.textContent);
+      nodeme.textContent = newmsg;
+}
+
+function string_me( notme){
+  newme = 'M';
+  if(notme.length >2){
+    for( x=1; x<notme.length; x++){
+      newme += 'e';
+    }
+  }
+  else{
+    newme = 'me';
+  }
+  return newme;
+}
 // #
+
+function text_me( notme){
+    spliz = notme.split(" ");
+
+    for(w=0; w<spliz.length; w++){
+      spliz[w] = string_me(spliz[w]);
+    }
+    return spliz.join(" ");
+}
